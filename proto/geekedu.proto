@@ -1,0 +1,127 @@
+geekedu.proto:syntax = "proto3"; // 指定proto3语法
+package geekedu; // 包名
+option go_package = "./;geekedu"; // Go包路径（生成到proto目录下）
+
+// ------------- 消息体定义 -------------
+// 新增：注册请求
+message RegisterRequest {
+    string username = 1; // 用户名
+    string password = 2; // 密码
+}
+
+// 新增：注册响应
+message RegisterResponse {
+    int32 code = 1;      // 状态码
+    string msg = 2;      // 提示信息
+}
+
+// 用户登录请求
+message UserLoginRequest {
+  string username = 1; // 用户名
+  string password = 2; // 密码
+}
+
+// 用户登录响应
+message UserLoginResponse {
+  uint32 uid = 1; // 用户ID
+  string token = 2; // JWT Token
+  int32 role = 3; // 角色：0-学员，1-管理员
+}
+
+// 课程信息
+message CourseInfo {
+  uint32 id = 1; // 课程ID
+  string title = 2; // 课程标题
+  double price = 3; // 课程价格
+  string intro = 4; // 课程简介
+  string cover_oss_key = 5; // 封面OSS Key
+  string cover_signed_url = 6; // 封面预签名URL
+  string created_at = 7; // 创建时间
+}
+
+// 新增：视频基础信息（课程列表弹窗用）
+message VideoSimpleInfo {
+  uint32 video_id = 1; // 视频ID
+  string title = 2;    // 视频标题
+  string created_at = 3;// 创建时间
+}
+
+// 课程列表请求
+message CourseListRequest {}
+
+// 课程列表响应
+message CourseListResponse {
+  repeated CourseInfo courses = 1; // 课程列表（数组）
+}
+
+// 发布课程请求
+message CreateCourseRequest {
+  uint32 uid = 1; // 创建者ID
+  string title = 2; // 课程标题
+  double price = 3; // 课程价格
+  string intro = 4; // 课程简介
+  string cover_oss_key = 5; // 封面OSS Key
+}
+
+// 发布课程响应
+message CreateCourseResponse {
+  uint32 course_id = 1; // 课程ID
+}
+
+// 上传视频请求
+message UploadVideoRequest {
+  uint32 uid = 1; // 上传者ID
+  uint32 course_id = 2; // 所属课程ID
+  string title = 3; // 视频标题
+  string video_oss_key = 4; // 视频OSS Key
+}
+
+// 上传视频响应
+message UploadVideoResponse {
+  uint32 video_id = 1; // 视频ID
+}
+
+// 购买课程请求
+message CreateOrderRequest {
+  uint32 uid = 1; // 用户ID
+  uint32 course_id = 2; // 课程ID
+}
+
+// 购买课程响应
+message CreateOrderResponse {
+  uint32 order_id = 1; // 订单ID
+}
+
+// 新增：获取课程下所有视频请求
+message GetCourseVideosRequest {
+  uint32 uid = 1;      // 用户ID（鉴权用）
+  uint32 course_id = 2;// 课程ID
+}
+
+// 新增：获取课程下所有视频响应
+message GetCourseVideosResponse {
+  repeated VideoSimpleInfo videos = 1; // 该课程下所有视频
+}
+
+// 获取视频播放URL请求
+message GetVideoPlayUrlRequest {
+  uint32 uid = 1; // 用户ID
+  uint32 video_id = 2; // 视频ID
+}
+
+// 获取视频播放URL响应
+message GetVideoPlayUrlResponse {
+  string signed_url = 1; // 视频预签名URL（私有OSS，3600秒有效）
+}
+
+// ------------- 服务定义 -------------
+service GeekEduService {
+  rpc Register(RegisterRequest) returns (RegisterResponse); // 注册
+  rpc UserLogin(UserLoginRequest) returns (UserLoginResponse); // 登录
+  rpc GetCourseList(CourseListRequest) returns (CourseListResponse); // 获取课程列表
+  rpc CreateCourse(CreateCourseRequest) returns (CreateCourseResponse); // 发布课程
+  rpc UploadVideo(UploadVideoRequest) returns (UploadVideoResponse); // 上传视频
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse); // 购买课程
+  rpc GetCourseVideos(GetCourseVideosRequest) returns (GetCourseVideosResponse); // 新增：获取课程视频列表
+  rpc GetVideoPlayUrl(GetVideoPlayUrlRequest) returns (GetVideoPlayUrlResponse); // 获取播放URL
+}

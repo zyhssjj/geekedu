@@ -1,0 +1,84 @@
+services:
+  # 1. MySQL数据库
+  mysql:
+    image: mysql:8.0
+    container_name: geekedu-mysql
+    env_file:
+      - ../.env 
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-geekedu}
+    volumes:
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    restart: always
+    networks:
+      - geekedu-network
+
+  # 2. Logic Server（gRPC）【终极修改：构建上下文为项目根目录，包含common】
+  logic-server:
+    build:
+      context: ..  # 构建上下文：项目根目录（包含common、logic-server等所有目录）
+      dockerfile: ./logic-server/Dockerfile  # 指向项目根目录下的logic-server/Dockerfile
+    container_name: geekedu-logic-server
+    environment:
+      OSS_ACCESS_KEY: ${OSS_ACCESS_KEY}
+      OSS_SECRET_KEY: ${OSS_SECRET_KEY}
+      OSS_ENDPOINT: ${OSS_ENDPOINT}
+      OSS_BUCKET: ${OSS_BUCKET}
+      DB_HOST: mysql
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-geekedu}
+      GRPC_PORT: ${GRPC_PORT:-50051}
+      JWT_SECRET: ${JWT_SECRET:-geekedu-jwt-2026}
+    env_file:
+      - ../.env
+    depends_on:
+      - mysql
+    restart: always
+    networks:
+      - geekedu-network
+
+  # 3. Web Server（Gin）【终极修改：构建上下文为项目根目录，包含common】
+  web-server:
+    build:
+      context: ..  # 构建上下文：项目根目录（包含common、web-server等所有目录）
+      dockerfile: ./web-server/Dockerfile  # 指向项目根目录下的web-server/Dockerfile
+    container_name: geekedu-web-server
+    environment:
+      LOGIC_SERVER_ADDR: logic-server:${GRPC_PORT:-50051}
+      WEB_PORT: ${WEB_PORT:-8080}
+    env_file:
+      - ../.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - logic-server
+    restart: always
+    networks:
+      - geekedu-network
+
+  # 4. 前端（Nginx）
+  frontend:
+    build:
+      context: ..
+      dockerfile: ./frontend/Dockerfile
+    container_name: geekedu-frontend
+    ports:
+      - "8088:80"
+    depends_on:
+      - web-server
+    restart: always
+    networks:
+      - geekedu-network
+
+volumes:
+  mysql-data:
+
+networks:
+  geekedu-network:
+    driver: bridge
